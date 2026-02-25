@@ -44,7 +44,6 @@ llm = AzureChatOpenAI(
 def _parse_json_response(content: str) -> dict:
     content = content.strip()
 
-    # Remove fenced code blocks if present
     fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", content, re.DOTALL)
     if fence_match:
         content = fence_match.group(1).strip()
@@ -52,10 +51,25 @@ def _parse_json_response(content: str) -> dict:
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        brace_match = re.search(r"\{.*\}", content, re.DOTALL)
-        if brace_match:
-            return json.loads(brace_match.group(0))
-        raise
+        pass
+
+    start = content.find("{")
+    if start != -1:
+        obj, _ = json.JSONDecoder().raw_decode(content, start)
+        return obj
+
+    raise json.JSONDecodeError("No valid JSON object found", content, 0)
+
+
+def _invoke_json_agent(agent, idea: str, max_retries: int = 2) -> dict:
+    last_exc: Exception = RuntimeError("no attempts made")
+    for _ in range(max_retries + 1):
+        content = _invoke_agent(agent, idea)
+        try:
+            return _parse_json_response(content)
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_exc = exc
+    raise last_exc
 
 
 def _make_agent(system_prompt: str, tools: list):
@@ -102,49 +116,37 @@ def intake(state: ResearchState) -> dict:
 
 def market_sizing(state: ResearchState) -> dict:
     agent = _make_agent(MARKET_SIZING_PROMPT, [web_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "market_sizing", "data": data}]}
 
 
 def competitor_matrix(state: ResearchState) -> dict:
     agent = _make_agent(COMPETITOR_MATRIX_PROMPT, [web_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "competitor_matrix", "data": data}]}
 
 
 def risk_analysis(state: ResearchState) -> dict:
     agent = _make_agent(RISK_ANALYSIS_PROMPT, [web_search, news_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "risk_analysis", "data": data}]}
 
 
 def tech_marketing_strategy(state: ResearchState) -> dict:
     agent = _make_agent(TECH_MARKETING_STRATEGY_PROMPT, [web_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "tech_marketing_strategy", "data": data}]}
 
 
 def usp_analysis(state: ResearchState) -> dict:
     agent = _make_agent(USP_ANALYSIS_PROMPT, [web_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "usp_analysis", "data": data}]}
 
 
 def build_timeline(state: ResearchState) -> dict:
     agent = _make_agent(BUILD_TIMELINE_PROMPT, [web_search])
-    content = _invoke_agent(agent, state["idea"])
-    data = _parse_json_response(content)
-
+    data = _invoke_json_agent(agent, state["idea"])
     return {"research_results": [{"type": "build_timeline", "data": data}]}
 
 
