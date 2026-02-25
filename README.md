@@ -1,0 +1,16 @@
+#### How to run the code
+
+```bash
+python main.py
+```
+
+### env samples
+
+# Azure OpenAI
+AZURE_OPENAI_DEPLOYMENT=your_deployment_name_here
+AZURE_OPENAI_API_VERSION=2024-02-01
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your_azure_openai_key_here
+
+# Tavily
+TAVILY_API_KEY=your_tavily_key_here
